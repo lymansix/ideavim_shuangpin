@@ -26,7 +26,19 @@ object ImeLookup {
         if (list.isEmpty()) return
 
         val items = list.take(9).mapIndexed { i, candidate ->
-            LookupElementBuilder.create(candidate.word)
+            // The lookupString must be unique per item — IDEA's LookupImpl dedupes
+            // items that share a lookupString, which causes the visible list to lose
+            // an entry (and its number) whenever the dict returns two candidates with
+            // the same word but different codes (e.g. "翻案" with codes "fja" and
+            // "fjan"). Using `word + code` as the lookupString keeps every item
+            // distinct while the presentableText (what the user actually sees)
+            // remains the clean "1. 翻案" form.
+            //
+            // This does NOT affect candidate selection: commit() uses the numeric
+            // index back into FlyPyDict.getCandidates(), not IDEA's selected lookup
+            // element, and we consume the keystroke so IDEA's default insert never
+            // runs.
+            LookupElementBuilder.create(candidate.word + candidate.code)
                 .withPresentableText("${i + 1}. ${candidate.word}")
         }.toTypedArray()
 
