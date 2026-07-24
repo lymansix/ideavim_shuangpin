@@ -17,7 +17,16 @@ import com.intellij.openapi.components.Storage
 class ImeSettings : PersistentStateComponent<ImeSettings.State> {
 
     data class State(
-        var isChineseMode: Boolean = true,
+        /**
+         * Default is `false` (English mode). Users flip to Chinese via the status bar
+         * widget or `Ctrl+Alt+\`. The choice of English as default matches the
+         * convention that most IDE editing is in English (code, commands, searches);
+         * users who primarily type Chinese can flip once and stay there.
+         *
+         * Note: existing installing with a persisted `fly-ime-settings.xml` are not
+         * affected — their saved value is loaded over this default.
+         */
+        var isChineseMode: Boolean = false,
         /**
          * When IdeaVim is installed, controls whether the IME auto-switches on Vim
          * mode transitions (exit-insert → English; enter-insert → restore previous

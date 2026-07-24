@@ -122,7 +122,7 @@ status/
 settings/
   ImeSettings.kt               - Persistent app-level settings (PersistentStateComponent, @Service(APP));
                                  stored in fly-ime-settings.xml. Fields:
-                                 isChineseMode, enableSmartSwitch, showPinyinHint.
+                                 isChineseMode (default false = English), enableSmartSwitch.
                                  Companion: ImeSettings.getInstance().
 
 ImeBundle.kt                   - DynamicBundle wrapper for messages/ImeBundle.properties

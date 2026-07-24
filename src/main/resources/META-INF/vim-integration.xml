@@ -1,5 +1,5 @@
 <!--
-  Loaded only when IdeaVim is installed (see plugin.xml <depends optional="true">).
+  Loaded only when IdeaVim is installed (see plugin.xml <depends on optional="true">).
   Registers an AppLifecycleListener that wires up Vim-mode → IME-mode synchronization:
     - Exit insert (Esc) → store current isChineseMode, switch to English
     - Enter insert      → restore previously-stored isChineseMode

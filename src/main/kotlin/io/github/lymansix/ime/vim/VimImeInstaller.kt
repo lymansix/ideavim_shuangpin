@@ -29,19 +29,27 @@ import java.util.concurrent.atomic.AtomicBoolean
  * `storedChineseMode` is held globally (not per-editor) because [ImeSettings.isChineseMode]
  * is itself an app-level setting — there is no per-editor Chinese/English state to preserve.
  *
- * Implements [Disposable] so the message bus subscription and the Vim insert listener
- * are cleaned up on plugin unload / dynamic reload — without this, each reload would
- * stack another copy of both listeners. The parent disposable is the application, so
- * cleanup happens automatically on IDE shutdown too.
+ * ## Lifecycle
+ *
+ * `AppLifecycleListener` implementations cannot also implement `Disposable` — the
+ * platform manages those instances itself and explicitly rejects the combination
+ * ("Listener implementation must not implement 'Disposable'"). So we keep the
+ * cleanup resources in a separate internal [Disposable] ([cleanup]) and register
+ * THAT with the application via [Disposer.register]. The result is equivalent:
+ * on IDE shutdown or dynamic plugin reload, [cleanup] runs and tears down both
+ * the message bus connection and the Vim insert listener.
  *
  * Note: uses [VimInsertListener] / [VimPlugin.getChange().addInsertListener][com.maddyhome.idea.vim.VimPlugin.getChange]
  * which are deprecated in newer IdeaVim versions in favor of `ModeChangeListener` /
  * `listenersNotifier`. Suppressing the warnings here — migration to the new API can be
  * done as a follow-up once we pin a specific IdeaVim version target.
  */
-class VimImeInstaller : AppLifecycleListener, Disposable {
+class VimImeInstaller : AppLifecycleListener {
 
-    private val storedChineseMode = AtomicBoolean(true)
+    // Default matches ImeSettings.State.isChineseMode's default (English / false).
+    // If the user enters insert mode without ever having left it (fresh start),
+    // restoring to English is consistent with the plugin's default state.
+    private val storedChineseMode = AtomicBoolean(false)
 
     /** The insert listener we register — kept as a field so we can unregister on dispose. */
     private val insertListener = object : VimInsertListener {
@@ -51,14 +59,30 @@ class VimImeInstaller : AppLifecycleListener, Disposable {
         }
     }
 
+    private var messageBusConnection: com.intellij.util.messages.MessageBusConnection? = null
+
+    /**
+     * Internal [Disposable] that owns the cleanup work: disconnect the message bus
+     * subscription and unregister the Vim insert listener. Registered with the
+     * application in [appFrameCreated] so it fires on IDE shutdown and on dynamic
+     * plugin reload (without which each reload would stack another copy of both
+     * listeners).
+     */
+    private val cleanup = Disposable {
+        messageBusConnection?.disconnect()
+        messageBusConnection = null
+        runCatching { VimPlugin.getChange().removeInsertListener(insertListener) }
+    }
+
     override fun appFrameCreated(commandLineArgs: MutableList<String>) {
-        // Tie this instance's lifetime to the application so [dispose] runs on IDE
-        // shutdown, and register it so dynamic plugin unload also triggers cleanup.
-        Disposer.register(ApplicationManager.getApplication() as Disposable, this)
+        // Tie cleanup's lifetime to the application. We can't make VimImeInstaller
+        // itself Disposable (platform rejects it), but registering a child Disposable
+        // achieves the same effect.
+        Disposer.register(ApplicationManager.getApplication() as Disposable, cleanup)
 
         // (a) Detect exit-insert by matching the command name. The connection is
-        //     bound to `this` so it's auto-disconnected when [dispose] runs.
-        messageBusConnection = ApplicationManager.getApplication().messageBus.connect(this)
+        //     bound to [cleanup] so it's auto-disconnected when cleanup runs.
+        messageBusConnection = ApplicationManager.getApplication().messageBus.connect(cleanup)
         messageBusConnection?.subscribe(
             CommandListener.TOPIC,
             object : CommandListener {
@@ -75,15 +99,6 @@ class VimImeInstaller : AppLifecycleListener, Disposable {
 
         // (b) Detect enter-insert via IdeaVim's own listener API.
         VimPlugin.getChange().addInsertListener(insertListener)
-    }
-
-    private var messageBusConnection: com.intellij.util.messages.MessageBusConnection? = null
-
-    override fun dispose() {
-        messageBusConnection?.disconnect()
-        messageBusConnection = null
-        // Remove the insert listener we added, so reloads don't stack.
-        runCatching { VimPlugin.getChange().removeInsertListener(insertListener) }
     }
 
     /**
