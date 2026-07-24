@@ -90,6 +90,11 @@ dict/
                                  letter, returns up to MAX_CANDIDATES = 50. Weight heuristic: exact
                                  code match → 1000, shorter codes rank higher.
   Candidate.kt                 - data class Candidate(word, code, weight: Int = 0)  [weight is var]
+  Punctuation.kt               - ASCII → Chinese/fullwidth punctuation mapping (`,` → `，`,
+                                 `.` → `。`, `\` → `、`, `<` → `《`, etc.). Applied by
+                                 ImeTypeHandler on the final pass-through whenever
+                                 chineseMode is true. Quote pairing (opening/closing)
+                                 is not tracked — both `'`/`"` map to their right-side form.
 
 lookup/
   ImeLookup.kt                 - `object` that drives the candidate popup directly.

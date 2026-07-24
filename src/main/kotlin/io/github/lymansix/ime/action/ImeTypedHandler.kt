@@ -5,6 +5,7 @@ import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.actionSystem.TypedActionHandler
 import io.github.lymansix.ime.dict.FlyPyDict
+import io.github.lymansix.ime.dict.Punctuation
 import io.github.lymansix.ime.lookup.ImeLookup
 import io.github.lymansix.ime.settings.ImeSettings
 import io.github.lymansix.ime.state.ImeState
@@ -47,6 +48,20 @@ class ImeTypeHandler(
 
         // a-z：进入 composing（不落盘）
         if (charTyped in 'a'..'z') {
+            // The Xiaohe dict's codes are 1-4 chars. Once we've hit the max, any
+            // further letter can't extend the current code — commit the first
+            // candidate for what we have (if any), reset, and start a fresh
+            // composing with the new letter. Without this, typing a 5th letter
+            // would grow the buffer past the dict's max code length, getCandidates()
+            // would return empty, and the popup would vanish leaving the user unable
+            // to select via number keys.
+            if (state.composing.length >= MAX_CODE_LENGTH) {
+                commit(editor, state, 0)
+                // commit() resets state on success; if there were no candidates it
+                // returns early without resetting, so reset explicitly to avoid
+                // carrying a stale 4-char buffer forward.
+                state.reset()
+            }
             state.start(editor)
             state.composing.append(charTyped)
             ImeLookup.show(editor, state)
@@ -70,7 +85,11 @@ class ImeTypeHandler(
             commit(editor, state, 0)
         }
 
-        original.execute(editor, charTyped, dataContext)
+        // We only reach here when chineseMode == true (the !chineseMode branch
+        // returned early at the top of this method), so substitute ASCII
+        // punctuation with its Chinese/fullwidth equivalent before passing through.
+        val outputChar = Punctuation.toChinese(charTyped) ?: charTyped
+        original.execute(editor, outputChar, dataContext)
     }
 
     private fun commit(editor: Editor, state: ImeState, index: Int) {
@@ -86,5 +105,12 @@ class ImeTypeHandler(
         }
 
         state.reset()
+    }
+
+    private companion object {
+        // Xiaohe Yin-xing (小鹤音形) codes are 1-4 letters. Once the composing buffer
+        // hits this length, the next letter can't extend the current code — we commit
+        // and start fresh. Keep in sync with FlyPyDict's actual max code length.
+        const val MAX_CODE_LENGTH = 4
     }
 }
