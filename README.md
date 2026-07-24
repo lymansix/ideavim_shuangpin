@@ -16,7 +16,7 @@
 - 📏 **四键自动上屏** — 码长达 4 字符后再按字母会自动提交首选词并开始新词
 - 🀄 **中文标点替换** — 中文模式下 `,` `.` `;` `\` 等自动替换为 `，` `。` `；` `、` 等全角标点
 - 🎯 **原生候选窗口** — 基于 IDEA 的 `LookupManager`，与其他补全弹窗风格一致
-- 🌐 **全场景支持** — 编辑器、Git Commit、Search Everywhere、Find Dialog、Terminal、Run Configuration、Settings 搜索……
+- 🌐 **场景支持** — 编辑器、Git Commit
 - 🔄 **IdeaVim 联动** *(可选)* — 检测到 IdeaVim 时，进入/退出插入模式自动切换中/英文模式（可通过 `enableSmartSwitch` 设置关闭）
 
 ## 📦 安装
