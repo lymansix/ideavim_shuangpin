@@ -1,171 +1,165 @@
-# Ideavim-shuangpin
+# 小鹤双拼输入法 — IntelliJ Platform 插件
 
-[![Twitter Follow](https://img.shields.io/badge/follow-%40JBPlatform-1DA1F2?logo=twitter)](https://twitter.com/JBPlatform)
-[![Developers Forum](https://img.shields.io/badge/JetBrains%20Platform-Join-blue)][jb:forum]
+[![JetBrains Plugin](https://img.shields.io/badge/JetBrains-Plugin-000000?logo=jetbrains)](https://plugins.jetbrains.com/plugin/ORG.LYMANSIX.IDEAVIM-SHUANGPIN)
+[![IntelliJ IDEA](https://img.shields.io/badge/IntelliJ%20IDEA-2026.1+-blue?logo=intellijidea)](https://www.jetbrains.com/idea/)
+[![Kotlin](https://img.shields.io/badge/Kotlin-2.3.20-blue?logo=kotlin)](https://kotlinlang.org/)
 
-## Overview
+一个为 IntelliJ IDEA 量身打造的 **小鹤音形** 中文输入法插件。不依赖操作系统输入法，直接在 IDE 内完成中文输入——编辑器、Git Commit、Search Everywhere、终端、运行配置、设置搜索框等所有文本输入场景均支持。
 
-This repository implements an IntelliJ Platform plugin.
+> 虽然插件名叫 `ideavim-shuangpin`，但实际使用的码表是 **小鹤音形**（4 键编码），而非严格意义上的小鹤双拼（2 键编码）。插件本身对编码方案不敏感——只要码表是 `编码→词` 的格式就能工作。
 
-## Demo Functionality
+## ✨ 特性
 
-The sample plugin adds a `My Tool Window` tool window with a simple functionality of shuffling a random number.
+- 🈶 **中英文模式切换** — `Ctrl+Alt+\` 快捷键或状态栏点击切换
+- ⌨️ **Shift 临时英文** — 按住 Shift 输入字母直接上屏英文，松开恢复中文
+- 🔢 **数字选词** — 候选窗口按 `1`–`9` 直接选中，空格 / 回车选中第一个
+- 📏 **四键自动上屏** — 码长达 4 字符后再按字母会自动提交首选词并开始新词
+- 🀄 **中文标点替换** — 中文模式下 `,` `.` `;` `\` 等自动替换为 `，` `。` `；` `、` 等全角标点
+- 🎯 **原生候选窗口** — 基于 IDEA 的 `LookupManager`，与其他补全弹窗风格一致
+- 🌐 **全场景支持** — 编辑器、Git Commit、Search Everywhere、Find Dialog、Terminal、Run Configuration、Settings 搜索……
+- 🔄 **IdeaVim 联动** *(可选)* — 检测到 IdeaVim 时，进入/退出插入模式自动切换中/英文模式（可通过 `enableSmartSwitch` 设置关闭）
 
-## Plugin structure
+## 📦 安装
 
-A generated project contains the following content structure:
+1. 打开 IntelliJ IDEA → `Settings` → `Plugins` → `Marketplace`
+2. 搜索 `Xiaohe IME`（或 `ideavim-shuangpin`）
+3. 点击 `Install`，重启 IDE
+
+> 如果插件尚未上架，可以从 [Releases](../../releases) 下载 zip 包，通过 `Install Plugin from Disk...` 安装。
+
+## 🚀 使用
+
+| 操作 | 说明 |
+|---|---|
+| 输入 `a`–`z` | 在中文模式下进入拼音组合，候选窗口弹出 |
+| 按 `1`–`9` | 选中对应序号的候选词 |
+| 按 `空格` 或 `回车` | 选中第一个候选词 |
+| 按 `Shift` + 字母 | 临时输入大写英文字母（不进入拼音组合） |
+| 按 `Esc` | 清空当前拼音组合，候选窗口关闭 |
+| 按 `Backspace` | 删除拼音组合的最后一个字母；组合为空时恢复正常退格 |
+| `Ctrl+Alt+\` | 切换中文 / 英文模式 |
+| 点击状态栏 `中`/`英` | 同上，切换模式 |
+| 输入标点 `,` `.` `\` 等 | 中文模式下自动替换为 `，` `。` `、` 等全角标点 |
+
+### IdeaVim 用户
+
+安装 IdeaVim 后，插件会自动识别 Vim 模式切换：
+
+- 按 `<Esc>` 退出插入模式 → IME 自动切换到英文
+- 按 `i` 进入插入模式 → IME 自动恢复到离开插入模式前的状态
+
+此功能由 `ImeSettings.enableSmartSwitch`（默认开启）控制。如果你不希望自动切换，把它关掉即可。
+
+## 🏗️ 架构
 
 ```
-.
-├── .run/                   Predefined Run/Debug Configurations
-├── gradle
-│   ├── wrapper/            Gradle Wrapper
-│   ├── libs.versions.toml  Version catalog
-├── src                     Plugin sources
-│   └── main
-│       ├── kotlin/         Kotlin production sources
-│       └── resources/      Plugin resources
-│           ├── META-INF/   Plugin configuration file and logo
-│           └── messages/   Message bundles
-├── .gitignore              Git ignoring rules
-├── build.gradle.kts        Gradle build configuration
-├── gradle.properties       Gradle configuration properties
-├── gradlew                 *nix Gradle Wrapper script
-├── gradlew.bat             Windows Gradle Wrapper script
-├── README.md               This file
-└── settings.gradle.kts     Gradle project settings
+TypedAction.rawHandler
+  │
+  ▼
+┌──────────────────────────────────┐
+│ ImeTypeHandler  (核心分发)       │
+│  · a-z: 进入 composing, 不落盘   │
+│  · 1-9/空格/回车: 提交候选       │
+│  · Shift+字母: 临时英文          │
+│  · 其他: 提交后放行              │
+└──────────────────────────────────┘
+  │                      │
+  ▼                      ▼
+┌──────────────┐   ┌──────────────┐
+│ ImeLookup    │   │ FlyPyDict    │
+│ 候选窗口展示  │◄──│ 码表查询      │
+└──────────────┘   └──────────────┘
+       │
+       ▼
+┌──────────────┐
+│ LookupManager│   ← IDEA 原生 API, 不修改 Document
+└──────────────┘
 ```
 
-In addition to the configuration files, the most crucial part is the `src` directory, which contains our implementation
-and the manifest for our plugin – [plugin.xml][file:plugin.xml].
+关键设计：
+- **拦截在 Document 之外** — 通过 `TypedAction.setupRawHandler()` 在字符到达 Document 之前拦截，拼音字母永远不会写进文档
+- **候选提交即插入** — 通过 `WriteCommandAction.runWriteCommandAction` 直接将汉字写入 Document
+- **IdeaVim 兼容** — 消耗按键时同步消耗 AWT KeyEvent，避免 IdeaVim 的 `jk → Esc` 等快捷键误触发
+- **IdeaVim 可选集成** — 通过 `<depends optional="true">` 声明，未安装 IdeaVim 时相关代码完全不加载
 
-> [!NOTE]
-> To use Java in your plugin, create the `/src/main/java` directory.
+## 🛠️ 开发
 
-The plugin logo is placed in `src/main/resources/META-INF/pluginIcon.svg`.
-See [Plugin Logo][docs:logo] for more information and logo requirements.
+```bash
+# 启动沙盒 IDE 调试插件（代码热更新）
+./gradlew runIde
 
-## Build script
+# 编译检查
+./gradlew compileKotlin
 
-The [build.gradle.kts][file:build.gradle.kts] is the core of the project definition.
-It applies three Gradle plugins:
+# 运行测试（目前没有测试）
+./gradlew check
 
-| Plugin                            | Description                                                                      |
-|-----------------------------------|----------------------------------------------------------------------------------|
-| `org.jetbrains.kotlin.jvm`        | Adds Kotlin support                                                              |
-| `org.jetbrains.changelog`         | Simplifies patching the [CHANGELOG.md][file:CHANGELOG.md] file                   |
-| `org.jetbrains.intellij.platform` | The [IntelliJ Platform Gradle Plugin][docs:intellij-platform-gradle-plugin-docs] |
+# 验证插件兼容性
+./gradlew verifyPlugin
 
-The `intellijPlatform` dependencies block selects the IDE to compile against:
+# 构建可分发的 zip 包
+./gradlew buildPlugin
 
-```kotlin
-intellijIdea("2025.3.5")
+# 发布到 JetBrains Marketplace
+./gradlew publishPlugin
 ```
 
-See [Target Versions][docs:target-version] for more information.
+IDE 预置了三种 Run Configuration：`Run IDE with Plugin`、`Run Tests`、`Run Verifications`。
 
-The `intellijPlatform` dependencies block also contains a dependency on the platform testing framework:
+### 目录结构
 
-```kotlin
-testFramework(TestFrameworkType.Platform)
+```
+src/main/kotlin/io/github/lymansix/ime/
+├── action/
+│   ├── HandlerInstaller.kt         生命周期钩子, 注册所有 handler
+│   ├── ImeTypedHandler.kt          核心按键分发
+│   ├── ImeBackspaceHandler.kt      退格处理
+│   └── ImeEscapeHandler.kt         ESC 处理
+├── dict/
+│   ├── FlyPyDict.kt                码表加载与查询
+│   ├── Candidate.kt                候选词数据类
+│   └── Punctuation.kt              中英文标点映射
+├── lookup/
+│   └── ImeLookup.kt                候选窗口驱动
+├── settings/
+│   └── ImeSettings.kt              持久化设置
+├── state/
+│   └── ImeState.kt                 每编辑器的拼音组合状态
+├── status/
+│   └── ImeStatusWidget.kt          状态栏控件 + 切换 Action
+├── vim/
+│   └── VimImeInstaller.kt          IdeaVim 集成 (可选)
+└── ImeBundle.kt                    国际化资源束
 ```
 
-See [Testing][docs:testing] for more information
+### 替换码表
 
-## Plugin configuration file
+将 `src/main/resources/dict/fly.txt` 替换为你自己的码表文件即可。格式要求：
 
-The plugin configuration file is a [plugin.xml][file:plugin.xml] file located in the `src/main/resources/META-INF`
-directory.
-It provides general information about the plugin, its dependencies, extensions, and listeners.
+```
+编码   词1 [词2]
+```
 
-You can read more about this file in the [Plugin Configuration File][docs:plugin.xml] section of our documentation.
+- 每行一个编码，空格分隔
+- 第一列是编码（1-4 个小写字母）
+- 后续列是该编码对应的词（最多 2 个，空格分隔）
+- 编码列用空格填充到固定宽度（视觉对齐用，解析时会 trim）
 
-### Plugin ID and name
+## 🤝 贡献
 
-Generated plugin ID and name may require adjustment.
+欢迎提 Issue 和 PR！特别是：
 
-These values are generated based on _Group ID_ and _Artifact ID_ provided in the IDE Plugin wizard.
-It is recommended to review `<id>` and `<name>` elements in the plugin.xml file, and adjust them if needed.
+- 码表改进
+- 新编码方案支持
+- 测试用例
+- 文档完善
 
-Please note that Gradle properties `rootProject.name` and `project.group` don't need to match the `<id>` and `<name>`
-elements.
-There is no IntelliJ Platform-related reason they should as they serve different functions.
+## 📄 License
 
-## Predefined Run/Debug configurations
+[MIT](LICENSE)
 
-Within the default project structure, there is a `.run` directory provided containing predefined *Run/Debug
-configurations* that expose corresponding Gradle tasks:
+---
 
-| Configuration name  | Description                                                                                                                                                                           |
-|---------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Run IDE with Plugin | Runs [`:runIde`][docs:intellij-platform-gradle-plugin-runIde] IntelliJ Platform Gradle Plugin task. Use the *Debug* icon for plugin debugging.                                        |
-| Run Tests           | Runs [`:check`][gradle:lifecycle-tasks] Gradle task.                                                                                                                                  |
-| Run Verifications   | Runs [`:verifyPlugin`][docs:intellij-platform-gradle-plugin-verifyPlugin] IntelliJ Platform Gradle Plugin task to check the plugin compatibility against the specified IntelliJ IDEs. |
+**为什么叫 `ideavim-shuangpin` 却用音形码表？**
 
-> [!NOTE]
-> You can find the logs from the running task in the `idea.log` tab.
-
-## Publishing the plugin
-
-> [!TIP]
-> Make sure to follow all guidelines listed in [Publishing a Plugin][docs:publishing] to follow all recommended and
-> required steps.
-
-Releasing a plugin to [JetBrains Marketplace](https://plugins.jetbrains.com) is a straightforward operation that uses
-the `publishPlugin` Gradle task provided by
-the [intellij-platform-gradle-plugin][docs:intellij-platform-gradle-plugin-docs].
-
-You can also upload the plugin to the [JetBrains Plugin Repository](https://plugins.jetbrains.com/plugin/upload)
-manually via UI.
-
-## Useful links
-
-- [IntelliJ Platform SDK Plugin SDK][docs]
-- [IntelliJ Platform Gradle Plugin Documentation][docs:intellij-platform-gradle-plugin-docs]
-- [IntelliJ Platform Explorer][jb:ipe]
-- [JetBrains Marketplace Quality Guidelines][jb:quality-guidelines]
-- [IntelliJ Platform UI Guidelines][jb:ui-guidelines]
-- [JetBrains Marketplace Paid Plugins][jb:paid-plugins]
-- [IntelliJ SDK Code Samples][gh:code-samples]
-
-[docs]: https://plugins.jetbrains.com/docs/intellij
-
-[docs:plugin.xml]: https://plugins.jetbrains.com/docs/intellij/plugin-configuration-file.html?from=IJPluginReadmeFile
-
-[docs:publishing]: https://plugins.jetbrains.com/docs/intellij/publishing-plugin.html?from=IJPluginReadmeFile
-
-[docs:intellij-platform-gradle-plugin-docs]: https://plugins.jetbrains.com/docs/intellij/tools-intellij-platform-gradle-plugin.html?from=IJPluginReadmeFile
-
-[docs:intellij-platform-gradle-plugin-runIde]: https://plugins.jetbrains.com/docs/intellij/tools-intellij-platform-gradle-plugin-tasks.html?from=IJPluginReadmeFile#runIde
-
-[docs:intellij-platform-gradle-plugin-verifyPlugin]: https://plugins.jetbrains.com/docs/intellij/tools-intellij-platform-gradle-plugin-tasks.html?from=IJPluginReadmeFile#verifyPlugin
-
-[docs:logo]: https://plugins.jetbrains.com/docs/intellij/plugin-icon-file.html?from=IJPluginReadmeFile
-
-[docs:target-version]: https://plugins.jetbrains.com/docs/intellij/tools-intellij-platform-gradle-plugin-dependencies-extension.html?from=IJPluginReadmeFile#target-versions
-
-[docs:testing]: https://plugins.jetbrains.com/docs/intellij/tools-intellij-platform-gradle-plugin-dependencies-extension.html?from=IJPluginReadmeFile#testing
-
-[file:build.gradle.kts]: ./build.gradle.kts
-
-[file:CHANGELOG.md]: ./CHANGELOG.md
-
-[file:gradle.properties]: ./gradle.properties
-
-[file:plugin.xml]: ./src/main/resources/META-INF/plugin.xml
-
-[gh:code-samples]: https://github.com/JetBrains/intellij-sdk-code-samples
-
-[gradle:lifecycle-tasks]: https://docs.gradle.org/current/userguide/java_plugin.html#lifecycle_tasks
-
-[jb:github]: https://github.com/JetBrains/.github/blob/main/profile/README.md
-
-[jb:forum]: https://platform.jetbrains.com/
-
-[jb:quality-guidelines]: https://plugins.jetbrains.com/docs/marketplace/quality-guidelines.html
-
-[jb:paid-plugins]: https://plugins.jetbrains.com/docs/marketplace/paid-plugins-marketplace.html
-
-[jb:ipe]: https://jb.gg/ipe
-
-[jb:ui-guidelines]: https://jetbrains.github.io/ui
+最初的项目设想是做一个纯小鹤双拼方案，但实际使用的码表是作者手头现有的小鹤音形码表（`fly.txt`，文件名源自"飞"字）。插件本身只把编码当作 1-4 个字母的不透明字符串做前缀匹配，对具体方案不敏感——理论上支持任何形如 `编码→词` 的码表。名字就保留下来了。
