@@ -210,6 +210,8 @@ Resource bundle: `messages.ImeBundle`
 7. **ESC handler ALWAYS chains to the original**, even when not composing. This preserves default ESC semantics (close popups, cancel actions) regardless of IME state.
 8. **`ImeLookup.show()` hides any existing lookup BEFORE showing a new one** (`LookupManager.getActiveLookup(editor)?.hideLookup(true)`). Without this, re-triggering during composing stacks popups.
 9. **Dictionary file is `/dict/fly.txt`** (not `xiaohe.txt`), and settings storage is `fly-ime-settings.xml` (not `xiaohe-ime-settings.xml`). The naming reflects an earlier project name; the scheme is still Xiaohe (小鹤). Don't rename without updating both `FlyPyDict`'s resource path and `ImeSettings`'s `@State` annotation.
+10. **When the handler consumes a keystroke, it ALSO consumes the underlying AWT `KeyEvent`** via `(IdeEventQueue.getInstance().trueCurrentEvent as? KeyEvent)?.consume()`. This is essential for IdeaVim compatibility: IdeaVim's fast-escape sequences (e.g. `jk` → Esc) listen at a lower layer than `TypedAction` and would otherwise still observe letters that our handler has "consumed" at the TypedAction level, and misfire during Chinese composition. Without the AWT consume, typing a pinyin that happens to match a registered fast-escape sequence would yank the user out of insert mode. Same treatment in `ImeBackspaceHandler` while composing.
+11. **ESC handler always propagates**, even when composing. Pressing ESC should both reset the composing buffer AND exit IdeaVim insert mode — both are expected behaviors.
 
 ### IdeaVim integration (optional)
 

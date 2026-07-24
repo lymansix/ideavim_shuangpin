@@ -65,18 +65,25 @@ class ImeTypeHandler(
             state.start(editor)
             state.composing.append(charTyped)
             ImeLookup.show(editor, state)
+            // Consume the underlying AWT KeyEvent so plugins that listen at a lower
+            // layer than TypedAction (notably IdeaVim — whose fast-escape sequences
+            // like `jk` → Esc would otherwise still see the letters and misfire)
+            // don't receive this keystroke.
+            consumeCurrentAwtEvent()
             return
         }
 
         // 数字选词 1–9
         if (charTyped in '1'..'9' && state.composing.isNotEmpty()) {
             commit(editor, state, charTyped - '1')
+            consumeCurrentAwtEvent()
             return
         }
 
         // Space / Enter 提交
         if ((charTyped == ' ' || charTyped == '\n') && state.composing.isNotEmpty()) {
             commit(editor, state, 0)
+            consumeCurrentAwtEvent()
             return
         }
 
@@ -90,6 +97,23 @@ class ImeTypeHandler(
         // punctuation with its Chinese/fullwidth equivalent before passing through.
         val outputChar = Punctuation.toChinese(charTyped) ?: charTyped
         original.execute(editor, outputChar, dataContext)
+    }
+
+    /**
+     * Mark the AWT event currently being dispatched as consumed.
+     *
+     * This is the belt to [TypedActionHandler]'s suspenders: returning without
+     * calling `original.execute` keeps the character out of the Document, but
+     * plugins that listen on the editor component at the AWT layer (notably
+     * IdeaVim, for features like `jk` → Esc) can still observe the keystroke.
+     * Calling [java.awt.AWTEvent.consume] on the in-flight event stops those
+     * listeners too.
+     *
+     * No-op if the current event isn't a KeyEvent (defensive — shouldn't happen
+     * during a typed handler callback).
+     */
+    private fun consumeCurrentAwtEvent() {
+        (IdeEventQueue.getInstance().trueCurrentEvent as? KeyEvent)?.consume()
     }
 
     private fun commit(editor: Editor, state: ImeState, index: Int) {
