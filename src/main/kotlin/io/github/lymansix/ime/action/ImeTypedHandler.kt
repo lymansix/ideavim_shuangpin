@@ -1,4 +1,5 @@
 package io.github.lymansix.ime.action
+import com.intellij.ide.IdeEventQueue
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.editor.Editor
@@ -7,6 +8,8 @@ import io.github.lymansix.ime.dict.FlyPyDict
 import io.github.lymansix.ime.lookup.ImeLookup
 import io.github.lymansix.ime.settings.ImeSettings
 import io.github.lymansix.ime.state.ImeState
+import java.awt.event.InputEvent
+import java.awt.event.KeyEvent
 
 class ImeTypeHandler(
     private val original: TypedActionHandler
@@ -20,6 +23,24 @@ class ImeTypeHandler(
             // If we were composing and the user just toggled to English,
             // abandon the in-flight buffer so it doesn't orphan with a stale startOffset.
             if (state.composing.isNotEmpty()) state.reset()
+            original.execute(editor, charTyped, dataContext)
+            return
+        }
+
+        // Shift + letter = temporary English. Check the modifier on the current
+        // AWT event directly (via IdeEventQueue) because charTyped may or may not
+        // reflect Shift depending on platform/keyboard-layout: some configurations
+        // deliver the lowercase char even when Shift is held.
+        val currentEvent = IdeEventQueue.getInstance().trueCurrentEvent
+        val shiftHeld = currentEvent is KeyEvent &&
+                (currentEvent.modifiersEx and InputEvent.SHIFT_DOWN_MASK) != 0
+        val isLetter = charTyped in 'a'..'z' || charTyped in 'A'..'Z'
+
+        if ((shiftHeld || charTyped in 'A'..'Z') && isLetter) {
+            // Shift + letter while composing: commit first candidate (consistent
+            // with how any other non-a-z char is handled), then pass the letter
+            // through so it lands in the document as uppercase English.
+            if (state.composing.isNotEmpty()) commit(editor, state, 0)
             original.execute(editor, charTyped, dataContext)
             return
         }
