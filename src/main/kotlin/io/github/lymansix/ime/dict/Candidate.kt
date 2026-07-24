@@ -5,6 +5,5 @@ package io.github.lymansix.ime.dict
  */
 data class Candidate(
     val word: String,
-    val code: String,
-    var weight: Int = 0
+    val code: String
 )

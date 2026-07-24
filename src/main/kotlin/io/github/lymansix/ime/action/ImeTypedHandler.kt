@@ -58,9 +58,9 @@ class ImeTypeHandler(
             if (state.composing.length >= MAX_CODE_LENGTH) {
                 commit(editor, state, 0)
                 // commit() resets state on success; if there were no candidates it
-                // returns early without resetting, so reset explicitly to avoid
-                // carrying a stale 4-char buffer forward.
-                state.reset()
+                // returns early without resetting, so reset explicitly only if the
+                // buffer is still non-empty.
+                if (state.composing.isNotEmpty()) state.reset()
             }
             state.start(editor)
             state.composing.append(charTyped)

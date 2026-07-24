@@ -16,13 +16,13 @@
             <li>Xiaohe double-pinyin input scheme (小鹤双拼方案)</li>
             <li>Native IntelliJ completion-style candidate popup</li>
             <li>Works in all text input contexts: editors, Git Commit, Search Everywhere, Terminal, etc.</li>
-            <li>Smart Chinese/English mode switching with Ctrl+Alt+L shortcut</li>
+            <li>Smart Chinese/English mode switching with Ctrl+Alt+\ shortcut</li>
             <li>Status bar widget showing current input mode</li>
             <li>Non-invasive: does not modify editor text stream</li>
         </ul>
         <h3>Usage:</h3>
         <ul>
-            <li>Press <b>Ctrl+Alt+L</b> to toggle between Chinese and English input modes</li>
+            <li>Press <b>Ctrl+Alt+\</b> to toggle between Chinese and English input modes</li>
             <li>Type pinyin in Chinese mode to see candidate suggestions</li>
             <li>Select candidates using number keys or arrow keys + Enter</li>
         </ul>

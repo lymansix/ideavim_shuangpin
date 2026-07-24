@@ -3,11 +3,13 @@
 package io.github.lymansix.ime.vim
 
 import com.intellij.ide.AppLifecycleListener
+import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.command.CommandEvent
 import com.intellij.openapi.command.CommandListener
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.ProjectManager
+import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.wm.WindowManager
 import com.maddyhome.idea.vim.VimPlugin
 import com.maddyhome.idea.vim.listener.VimInsertListener
@@ -27,21 +29,37 @@ import java.util.concurrent.atomic.AtomicBoolean
  * `storedChineseMode` is held globally (not per-editor) because [ImeSettings.isChineseMode]
  * is itself an app-level setting — there is no per-editor Chinese/English state to preserve.
  *
+ * Implements [Disposable] so the message bus subscription and the Vim insert listener
+ * are cleaned up on plugin unload / dynamic reload — without this, each reload would
+ * stack another copy of both listeners. The parent disposable is the application, so
+ * cleanup happens automatically on IDE shutdown too.
+ *
  * Note: uses [VimInsertListener] / [VimPlugin.getChange().addInsertListener][com.maddyhome.idea.vim.VimPlugin.getChange]
  * which are deprecated in newer IdeaVim versions in favor of `ModeChangeListener` /
  * `listenersNotifier`. Suppressing the warnings here — migration to the new API can be
  * done as a follow-up once we pin a specific IdeaVim version target.
  */
-class VimImeInstaller : AppLifecycleListener {
+class VimImeInstaller : AppLifecycleListener, Disposable {
 
     private val storedChineseMode = AtomicBoolean(true)
 
+    /** The insert listener we register — kept as a field so we can unregister on dispose. */
+    private val insertListener = object : VimInsertListener {
+        override fun insertModeStarted(editor: Editor) {
+            if (!ImeSettings.getInstance().enableSmartSwitch) return
+            applyMode(chinese = storedChineseMode.get())
+        }
+    }
+
     override fun appFrameCreated(commandLineArgs: MutableList<String>) {
-        // (a) Detect exit-insert by matching the command name. This uses only platform
-        //     APIs (CommandListener), so it works even if we later wanted to drop the
-        //     IdeaVim compile dependency; we keep it here because this file is loaded
-        //     only when IdeaVim is present anyway.
-        ApplicationManager.getApplication().messageBus.connect().subscribe(
+        // Tie this instance's lifetime to the application so [dispose] runs on IDE
+        // shutdown, and register it so dynamic plugin unload also triggers cleanup.
+        Disposer.register(ApplicationManager.getApplication() as Disposable, this)
+
+        // (a) Detect exit-insert by matching the command name. The connection is
+        //     bound to `this` so it's auto-disconnected when [dispose] runs.
+        messageBusConnection = ApplicationManager.getApplication().messageBus.connect(this)
+        messageBusConnection?.subscribe(
             CommandListener.TOPIC,
             object : CommandListener {
                 override fun beforeCommandFinished(event: CommandEvent) {
@@ -56,12 +74,16 @@ class VimImeInstaller : AppLifecycleListener {
         )
 
         // (b) Detect enter-insert via IdeaVim's own listener API.
-        VimPlugin.getChange().addInsertListener(object : VimInsertListener {
-            override fun insertModeStarted(editor: Editor) {
-                if (!ImeSettings.getInstance().enableSmartSwitch) return
-                applyMode(chinese = storedChineseMode.get())
-            }
-        })
+        VimPlugin.getChange().addInsertListener(insertListener)
+    }
+
+    private var messageBusConnection: com.intellij.util.messages.MessageBusConnection? = null
+
+    override fun dispose() {
+        messageBusConnection?.disconnect()
+        messageBusConnection = null
+        // Remove the insert listener we added, so reloads don't stack.
+        runCatching { VimPlugin.getChange().removeInsertListener(insertListener) }
     }
 
     /**

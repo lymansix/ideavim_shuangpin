@@ -40,20 +40,8 @@ object FlyPyDict {
             .asSequence()
             .filter { it.code.startsWith(code) }
             .take(MAX_CANDIDATES)
-            .map { Candidate(it.word, it.code, computeWeight(it.code, code)) }
+            .map { Candidate(it.word, it.code) }
             .toList()
-    }
-
-    /**
-     * Weight heuristic:
-     *   - Exact code match → 1000 (highest priority)
-     *   - Code length close to input → higher weight (prefer tighter matches)
-     *   - Shorter codes rank higher when input is short (for snappier single-char input)
-     */
-    private fun computeWeight(entryCode: String, inputCode: String): Int {
-        if (entryCode == inputCode) return 1000
-        val lenDiff = entryCode.length - inputCode.length
-        return (500 - lenDiff * 50).coerceAtLeast(1)
     }
 
     /** Precompiled whitespace splitter — used once per line during dict load. */

@@ -24,8 +24,7 @@ class ImeSettings : PersistentStateComponent<ImeSettings.State> {
          * mode). Driven by [io.github.lymansix.ime.vim.VimImeInstaller]. When IdeaVim
          * is not installed, this field is persisted but has no runtime effect.
          */
-        var enableSmartSwitch: Boolean = true,
-        var showPinyinHint: Boolean = true
+        var enableSmartSwitch: Boolean = true
     )
 
     private var state = State()
@@ -40,12 +39,6 @@ class ImeSettings : PersistentStateComponent<ImeSettings.State> {
         get() = state.enableSmartSwitch
         set(value) {
             state.enableSmartSwitch = value
-        }
-
-    var showPinyinHint: Boolean
-        get() = state.showPinyinHint
-        set(value) {
-            state.showPinyinHint = value
         }
 
     override fun getState(): State = state
