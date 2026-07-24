@@ -31,6 +31,12 @@
     <!-- Product and plugin compatibility requirements. -->
     <depends>com.intellij.modules.platform</depends>
 
+    <!-- IdeaVim integration is optional: when IdeaVim is installed, vim-integration.xml
+         is loaded and registers listeners that auto-switch the IME on mode transitions.
+         When IdeaVim is absent, the descriptor is skipped entirely so none of our
+         Vim-aware classes are loaded (no ClassNotFoundException). -->
+    <depends optional="true" config-file="vim-integration.xml">IdeaVIM</depends>
+
     <resource-bundle>messages.ImeBundle</resource-bundle>
 
     <extensions defaultExtensionNs="com.intellij">

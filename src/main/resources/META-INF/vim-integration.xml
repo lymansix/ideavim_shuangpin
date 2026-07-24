@@ -1,0 +1,13 @@
+<!--
+  Loaded only when IdeaVim is installed (see plugin.xml <depends optional="true">).
+  Registers an AppLifecycleListener that wires up Vim-mode → IME-mode synchronization:
+    - Exit insert (Esc) → store current isChineseMode, switch to English
+    - Enter insert      → restore previously-stored isChineseMode
+  Gated at runtime by ImeSettings.enableSmartSwitch; when false, the listeners are inert.
+-->
+<idea-plugin>
+    <applicationListeners>
+        <listener class="io.github.lymansix.ime.vim.VimImeInstaller"
+                  topic="com.intellij.ide.AppLifecycleListener"/>
+    </applicationListeners>
+</idea-plugin>

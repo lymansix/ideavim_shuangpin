@@ -15,7 +15,10 @@ dependencies {
         intellijIdea("2026.1.3")
         testFramework(TestFrameworkType.Platform)
 
-        // Add plugin dependencies for compilation here, for example:
-        // bundledPlugin("com.intellij.java")
+        // IdeaVim — compile-time dependency only. At runtime, it's declared optional
+        // in plugin.xml via <depends on optional="true" config-file="vim-integration.xml">,
+        // so the plugin still loads (and the vim-integration.xml is skipped) when
+        // IdeaVim is not installed.
+        plugin("IdeaVIM", "2.36.0")
     }
 }

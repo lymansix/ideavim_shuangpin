@@ -206,6 +206,19 @@ Resource bundle: `messages.ImeBundle`
 8. **`ImeLookup.show()` hides any existing lookup BEFORE showing a new one** (`LookupManager.getActiveLookup(editor)?.hideLookup(true)`). Without this, re-triggering during composing stacks popups.
 9. **Dictionary file is `/dict/fly.txt`** (not `xiaohe.txt`), and settings storage is `fly-ime-settings.xml` (not `xiaohe-ime-settings.xml`). The naming reflects an earlier project name; the scheme is still Xiaohe (小鹤). Don't rename without updating both `FlyPyDict`'s resource path and `ImeSettings`'s `@State` annotation.
 
+### IdeaVim integration (optional)
+
+When IdeaVim is installed, the plugin auto-switches `isChineseMode` on Vim mode transitions so users don't have to toggle manually when moving between insert and normal mode.
+
+- **Dependency wiring** — `build.gradle.kts` adds `plugin("IdeaVIM")` as a compile-time dependency, and `plugin.xml` declares it as `<depends optional="true" config-file="vim-integration.xml">IdeaVIM</depends>`. When IdeaVim is absent, `vim-integration.xml` is skipped entirely and no Vim-aware classes are loaded.
+- **`vim-integration.xml`** registers `VimImeInstaller` as an `AppLifecycleListener`. Only loaded when IdeaVim is present.
+- **`VimImeInstaller.kt`** (`io.github.lymansix.ime.vim`) installs two listeners at `appFrameCreated()`:
+  1. A `CommandListener` on `CommandListener.TOPIC` that matches command names `"Escape"`, `"Esc"`, `"VimInsertExitModeAction"` in `beforeCommandFinished` — detects exit from insert mode. Captures `isChineseMode` into `storedChineseMode` (AtomicBoolean, app-global to match `isChineseMode`'s scope), then calls `applyMode(false)`.
+  2. A `VimInsertListener` via `VimPlugin.getChange().addInsertListener(...)` — detects enter-insert. Calls `applyMode(storedChineseMode.get())` to restore the mode that was active before leaving insert.
+- **`applyMode(chinese)`** sets `isChineseMode` and refreshes the status bar widget across every open project (`WindowManager.getStatusBar(project).updateWidget(ImeStatusWidget.WIDGET_ID)`), so the 中/英 label updates immediately rather than waiting for the next focus change.
+- **Opt-in** — both listeners early-return when `ImeSettings.enableSmartSwitch` is `false`. That field is the on/off switch for the whole integration; when off, the user's manual toggles are the only thing that changes `isChineseMode`.
+- **Non-insert transitions** (normal→visual, visual→command, etc.) are intentionally ignored — only the insert↔non-insert boundary matters for IME mode.
+
 ### Notes for development
 
 - Configuration cache is enabled (`org.gradle.configuration-cache=true`). Avoid accessing `Project` from task execution time in ways that break it.

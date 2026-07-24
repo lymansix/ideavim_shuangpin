@@ -18,6 +18,12 @@ class ImeSettings : PersistentStateComponent<ImeSettings.State> {
 
     data class State(
         var isChineseMode: Boolean = true,
+        /**
+         * When IdeaVim is installed, controls whether the IME auto-switches on Vim
+         * mode transitions (exit-insert → English; enter-insert → restore previous
+         * mode). Driven by [io.github.lymansix.ime.vim.VimImeInstaller]. When IdeaVim
+         * is not installed, this field is persisted but has no runtime effect.
+         */
         var enableSmartSwitch: Boolean = true,
         var showPinyinHint: Boolean = true
     )
