@@ -1,0 +1,62 @@
+<!-- Plugin Configuration File. Read more: https://plugins.jetbrains.com/docs/intellij/plugin-configuration-file.html -->
+<idea-plugin>
+    <!-- Unique identifier of the plugin. -->
+    <id>org.lymansix.ideavim-shuangpin</id>
+
+    <!-- Public plugin name. -->
+    <name>Xiaohe IME</name>
+
+    <!-- Vendor information. -->
+    <vendor url="https://github.com/lymansix">lymansix</vendor>
+
+    <!-- Description of the plugin. -->
+    <description><![CDATA[Xiaohe Shuangpin Chinese Input Method for IntelliJ Platform. This extension provides a native Chinese input method using the Xiaohe double-pinyin scheme (小鹤双拼), seamlessly integrated with IntelliJ IDEA's completion system.
+        <h3>Features:</h3>
+        <ul>
+            <li>Xiaohe double-pinyin input scheme (小鹤双拼方案)</li>
+            <li>Native IntelliJ completion-style candidate popup</li>
+            <li>Works in all text input contexts: editors, Git Commit, Search Everywhere, Terminal, etc.</li>
+            <li>Smart Chinese/English mode switching with Ctrl+Alt+L shortcut</li>
+            <li>Status bar widget showing current input mode</li>
+            <li>Non-invasive: does not modify editor text stream</li>
+        </ul>
+        <h3>Usage:</h3>
+        <ul>
+            <li>Press <b>Ctrl+Alt+L</b> to toggle between Chinese and English input modes</li>
+            <li>Type pinyin in Chinese mode to see candidate suggestions</li>
+            <li>Select candidates using number keys or arrow keys + Enter</li>
+        </ul>
+    ]]></description>
+
+    <!-- Product and plugin compatibility requirements. -->
+    <depends>com.intellij.modules.platform</depends>
+
+    <resource-bundle>messages.ImeBundle</resource-bundle>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <!-- Status Bar Widget -->
+        <statusBarWidgetFactory
+            id="ImeStatusWidget"
+            implementation="io.github.lymansix.ime.status.ImeStatusWidgetFactory"/>
+
+        <!-- Application Service for Settings -->
+        <applicationService
+            serviceImplementation="io.github.lymansix.ime.settings.ImeSettings"/>
+
+    </extensions>
+
+    <actions>
+        <!-- Action to toggle IME mode (Chinese/English) -->
+        <action id="io.github.lymansix.ime.ToggleImeMode"
+                class="io.github.lymansix.ime.status.ToggleImeModeAction">
+            <keyboard-shortcut keymap="$default" first-keystroke="ctrl alt BACK_SLASH"/>
+        </action>
+    </actions>
+
+    <applicationListeners>
+        <!-- Install Backspace/Escape handlers on app startup -->
+        <listener class="io.github.lymansix.ime.action.HandlerInstaller"
+                  topic="com.intellij.ide.AppLifecycleListener"/>
+    </applicationListeners>
+
+</idea-plugin>
